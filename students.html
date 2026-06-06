@@ -969,6 +969,7 @@
     let allPayments = [];
     let allCourses = [];
     let allAddOns = [];
+    let allDepartments = [];
     let allStudents = [];
     let departments = [];
     let groups = [];
@@ -1114,18 +1115,34 @@
         showLoading(true);
         
         try {
-            const [sRes, gRes, pRes, cRes, aRes] = await Promise.all([
+            const [sRes, gRes, pRes, cRes, aRes, dRes] = await Promise.all([
                 apiCall('getAllStudents'),
                 apiCall('getAllGroups'),
                 apiCall('getAllPayments'),
                 apiCall('getAllCourses'),
-                apiCall('getAllAddOns')
+                apiCall('getAllAddOns'),
+                apiCall('getAllDepartments')
             ]);
             allStudents = sRes || [];
             groups = gRes || [];
             allPayments = pRes || [];
             allCourses = cRes || [];
             allAddOns = aRes || [];
+            allDepartments = dRes || [];
+            
+            // Populate Dept Filter
+            const deptFilter = document.getElementById('deptFilter');
+            if(deptFilter) {
+                deptFilter.innerHTML = '<option value="all">الكل</option>' + 
+                    allDepartments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            }
+            
+            // Populate add student modal dept
+            const studentDept = document.getElementById('studentDept');
+            if(studentDept) {
+                studentDept.innerHTML = '<option value="">اختر القسم</option>' + 
+                    allDepartments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            }
             
             updateGroupFilters();
             filterAndRender();
@@ -1203,7 +1220,8 @@
         
         // Render rows
         tbody.innerHTML = paginated.map(s => {
-            const deptName = {1: 'IT', 2: 'LANG', 3: 'BUS', 4: 'GD'}[s.deptId] || '-';
+            const deptObj = allDepartments.find(d => d.id == s.deptId);
+            const deptName = deptObj ? deptObj.name : '-';
             const groupName = s.groupName || '-';
             const createdDate = s.createdAt ? new Date(s.createdAt).toLocaleDateString('ar-EG') : '-';
             
@@ -1249,10 +1267,9 @@
         filterAndRender();
     }
     
-    function viewStudent(id) {
-        const student = allStudents.find(s => s.id == id);
-        if (student) {
-            showToast(`الطالب: ${student.name} | الكود: ${student.code} | الهاتف: ${student.phone} | المدرسة: ${student.school || '-'} | العمر: ${student.age || '-'}`, 'info');
+        function viewStudent(id) {
+        window.location.href = 'student_profile.html?id=' + id;
+    } | الكود: ${student.code} | الهاتف: ${student.phone} | المدرسة: ${student.school || '-'} | العمر: ${student.age || '-'}`, 'info');
         }
     }
     
