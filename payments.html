@@ -788,6 +788,9 @@
     let allCourses = [];
     let allGroups = [];
     let allAddOns = [];
+    let allDepartments = [];
+    let allFloors = [];
+    let allHalls = [];
     let paymentChart, revenueChart;
 
     // Toast Notification
@@ -905,28 +908,40 @@
     async function loadData() {
         showLoading(true);
         try {
-            const [paymentsRes, studentsRes, coursesRes, groupsRes, addonsRes] = await Promise.all([
+            const [paymentsRes, studentsRes, coursesRes, groupsRes, addonsRes, deptsRes, floorsRes, hallsRes] = await Promise.all([
                 apiCall('getAllPayments'),
                 apiCall('getAllStudents'),
                 apiCall('getAllCourses'),
                 apiCall('getAllGroups'),
-                apiCall('getAllAddOns')
+                apiCall('getAllAddOns'),
+                apiCall('getAllDepartments'),
+                apiCall('getAllFloors'),
+                apiCall('getAllHalls')
             ]);
             allPayments = paymentsRes || [];
             allStudents = studentsRes || [];
             allCourses = coursesRes || [];
             allGroups = groupsRes || [];
             allAddOns = addonsRes || [];
+            allDepartments = deptsRes || [];
+            allFloors = floorsRes || [];
+            allHalls = hallsRes || [];
             // Populate department filter
+            const floorFilter = document.getElementById('floorFilter');
+            if(floorFilter) {
+                floorFilter.innerHTML = '<option value="all">كل الأدوار</option>' + 
+                    allFloors.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+            }
             const deptFilter = document.getElementById('deptFilter');
-            const uniqueDepts = [...new Set(allStudents.map(s => s.deptId).filter(Boolean))];
-            deptFilter.innerHTML = '<option value="all">الكل</option>';
-            // Note: In payments.html we might not have allDepartments fetched, but we can just use simple dept IDs
-            // or fetch departments if needed. To keep it simple we just show IDs or fetch them.
-            // Let's just create options for 1 to 10 for now, or just leave it.
-            uniqueDepts.forEach(d => {
-                deptFilter.innerHTML += `<option value="${d}">قسم ${d}</option>`;
-            });
+            if(deptFilter) {
+                deptFilter.innerHTML = '<option value="all">كل الأقسام</option>' + 
+                    allDepartments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            }
+            const courseFilter = document.getElementById('courseFilter');
+            if(courseFilter) {
+                courseFilter.innerHTML = '<option value="all">كل الكورسات</option>' + 
+                    allCourses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            }
 
             
             updateStats();
@@ -973,8 +988,10 @@
     function filterAndRender() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         const statusFilter = document.getElementById('statusFilter').value;
-        const deptFilter = document.getElementById('deptFilter').value;
+        const deptFilter = document.getElementById('deptFilter') ? document.getElementById('deptFilter').value : 'all';
         const levelFilter = document.getElementById('levelFilter').value;
+        const floorFilter = document.getElementById('floorFilter') ? document.getElementById('floorFilter').value : 'all';
+        const courseFilter = document.getElementById('courseFilter') ? document.getElementById('courseFilter').value : 'all';
         
         let filtered = [...allPayments];
         if (searchTerm) {
@@ -984,6 +1001,33 @@
         if (statusFilter === 'paid') filtered = filtered.filter(p => p.remainingBalance === 0);
         else if (statusFilter === 'partial') filtered = filtered.filter(p => p.remainingBalance > 0 && p.amountPaid > 0);
         else if (statusFilter === 'unpaid') filtered = filtered.filter(p => p.amountPaid === 0 || !p.amountPaid);
+        
+        if (deptFilter !== 'all') {
+            filtered = filtered.filter(p => {
+                const student = allStudents.find(s => s.id == p.studentId);
+                return student && student.deptId == deptFilter;
+            });
+        }
+        
+        if (courseFilter !== 'all') {
+            filtered = filtered.filter(p => {
+                const student = allStudents.find(s => s.id == p.studentId);
+                if(!student || !student.groupId) return false;
+                const grp = allGroups.find(g => g.id == student.groupId);
+                return grp && grp.courseId == courseFilter;
+            });
+        }
+        
+        if (floorFilter !== 'all') {
+            filtered = filtered.filter(p => {
+                const student = allStudents.find(s => s.id == p.studentId);
+                if(!student || !student.groupId) return false;
+                const grp = allGroups.find(g => g.id == student.groupId);
+                if(!grp || !grp.hallId) return false;
+                const hall = allHalls.find(h => h.id == grp.hallId);
+                return hall && hall.floorNumber == floorFilter;
+            });
+        }
         
         renderTable(filtered);
     }
@@ -1120,11 +1164,19 @@
         
         if (!validateForm(rules)) return;
         
+        // Calculate Addons
+        let totalAddons = 0;
+        document.querySelectorAll('.addon-checkbox:checked').forEach(cb => {
+            totalAddons += parseFloat(cb.dataset.price) || 0;
+        });
+        
         const paymentData = {
             studentId: document.getElementById('selectedStudentId').value,
             levelNumber: parseInt(document.getElementById('levelNumber').value, 10) || 1,
             totalLevelFee: parseFloat(document.getElementById('totalLevelFee').value) || 0,
             amountPaid: parseFloat(document.getElementById('amountPaid').value) || 0,
+            discount: parseFloat(document.getElementById('discountAmount').value) || 0,
+            addonsPaid: totalAddons,
             paymentDate: document.getElementById('paymentDate').value,
             createdBy: currentUser.id
         };
