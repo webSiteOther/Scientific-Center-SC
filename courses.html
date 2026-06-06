@@ -1141,7 +1141,7 @@ function renderCourses(data) {
         };
         showLoading(true);
         try {
-            await apiCall('saveCourse', { courseData: data });
+            await apiCall('saveCourse', data);
             showToast('تم الحفظ بنجاح', 'success');
             closeModals(); loadData();
         } catch (e) {}
