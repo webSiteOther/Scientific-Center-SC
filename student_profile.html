@@ -199,13 +199,15 @@
         if(!stId) { alert("طالب غير موجود"); window.location.href = "students.html"; return; }
         
         try {
-            const [sRes, gRes, pRes, cRes, aRes] = await Promise.all([
+            const [sRes, gRes, pRes, cRes, aRes, dRes] = await Promise.all([
                 apiCall('getAllStudents'),
                 apiCall('getAllGroups'),
                 apiCall('getAllPayments'),
                 apiCall('getAllCourses'),
-                apiCall('getAllAddOns')
+                apiCall('getAllAddOns'),
+                apiCall('getAllDepartments')
             ]);
+            const allDepartments = dRes || [];
             
             const student = (sRes || []).find(s => s.id == stId);
             if(!student) { alert("طالب غير موجود"); window.location.href = "students.html"; return; }
@@ -217,8 +219,8 @@
             document.getElementById('stSchool').textContent = student.school || '-';
             document.getElementById('stAge').textContent = student.age || '-';
             
-            const deptNames = {1: 'تقنية المعلومات (IT)', 2: 'اللغات (LANG)', 3: 'إدارة الأعمال (BUS)', 4: 'التصميم (GD)'};
-            document.getElementById('stDept').textContent = deptNames[student.deptId] || '-';
+            const deptObj = allDepartments.find(d => d.id == student.deptId);
+            document.getElementById('stDept').textContent = deptObj ? deptObj.name : '-';
             
             const groups = gRes || [];
             const group = groups.find(g => g.id == student.groupId);
