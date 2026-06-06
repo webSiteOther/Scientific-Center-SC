@@ -675,7 +675,8 @@
     let allGroups = [];
     let allFloors = [];
     let allCourses = [];
-    const deptNames = {1: 'تقنية المعلومات (IT)', 2: 'اللغات (LANG)', 3: 'إدارة الأعمال (BUS)', 4: 'التصميم (GD)'};
+    let allDepartments = [];
+    
     let currentView = 'weekly';
     let calendar = null;
     
@@ -794,13 +795,14 @@
     async function loadData() {
         showLoading(true);
         try {
-            const [bRes, hRes, tRes, gRes, fRes, cRes] = await Promise.all([
+            const [bRes, hRes, tRes, gRes, fRes, cRes, dRes] = await Promise.all([
                 apiCall('getAllBookings'),
                 apiCall('getAllHalls'),
                 apiCall('getAllTrainers'),
                 apiCall('getAllGroups'),
                 apiCall('getAllFloors'),
-                apiCall('getAllCourses')
+                apiCall('getAllCourses'),
+                apiCall('getAllDepartments')
             ]);
             allBookings = bRes || [];
             allHalls = hRes || [];
@@ -808,6 +810,13 @@
             allGroups = gRes || [];
             allFloors = fRes || [];
             allCourses = cRes || [];
+            allDepartments = dRes || [];
+            
+            const deptFilter = document.getElementById('deptFilter');
+            if(deptFilter) {
+                deptFilter.innerHTML = '<option value="all">كل الأقسام</option>' + 
+                    allDepartments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            }
             
             updateFilters();
             renderBoard();
@@ -961,7 +970,7 @@
                                             ${(() => {
                                                 const group = allGroups.find(g => g.id == booking.groupId);
                                                 const course = group ? allCourses.find(c => c.id == group.courseId) : null;
-                                                return course ? deptNames[course.deptId] : '-';
+                                                if(!course) return '-'; const deptObj = allDepartments.find(d => d.id == course.deptId); return deptObj ? deptObj.name : '-';
                                             })()}
                                         </span>
                                     </div>
